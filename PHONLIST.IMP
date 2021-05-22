@@ -1,0 +1,180 @@
+IMPLEMENTATION MODULE PhonList;
+
+FROM Storage IMPORT ALLOCATE, DEALLOCATE;
+FROM Strings IMPORT Assign, CompareStr, ConstAssign;
+FROM InOut IMPORT WriteLn, WriteString;
+
+
+TYPE
+                  PersonsName = ARRAY [0..29] OF CHAR;
+                  PhoneNumber = ARRAY [0..12] OF CHAR;
+
+                  LList    = POINTER TO ListNode;
+       
+                  ListNode = RECORD
+                             Name  : PersonsName;
+                             Phone : PhoneNumber;
+                             Next : LList;
+                             END; (* record *)
+                  
+PROCEDURE OrderedSearch( MyList : LList; name : ARRAY OF CHAR;
+                     VAR PredPtr, CurrPtr : LList; VAR Found : BOOLEAN );
+         
+ BEGIN
+    CurrPtr := MyList; PredPtr := NIL;
+     WHILE (CurrPtr # NIL) AND (CompareStr(CurrPtr^.Name, name ) < 0) DO
+        PredPtr := CurrPtr;
+        CurrPtr := CurrPtr^.Next;
+        END (* while *);
+        Found := (CurrPtr # NIL) AND (CompareStr( CurrPtr^.Name, name ) = 0);
+
+ END OrderedSearch;
+                     
+PROCEDURE CreateList( VAR MyList : LList );
+
+BEGIN
+   
+    MyList := NIL;
+    
+END CreateList;
+  
+  
+PROCEDURE DestroyList( VAR MyList : LList );
+     
+     VAR CurrPtr : LList;
+     
+     BEGIN
+
+        WHILE MyList # NIL DO
+           CurrPtr := MyList;
+           MyList := MyList^.Next;
+           DISPOSE(CurrPtr);
+
+        END (* while *);
+
+ END DestroyList;
+  
+PROCEDURE InsertFromFile( VAR MyList : LList; VAR name, phone : ARRAY OF CHAR );
+	
+  VAR
+     TempPtr, CurrPtr : LList;
+
+   BEGIN
+
+        NEW( TempPtr );
+        Assign( name, TempPtr^.Name );
+        Assign( phone, TempPtr^.Phone );
+        TempPtr^.Next := NIL;
+     IF MyList = NIL THEN
+	MyList := TempPtr;
+      ELSE
+        CurrPtr := MyList;
+       WHILE (CurrPtr^.Next # NIL) DO
+          CurrPtr := CurrPtr^.Next;
+        END (* while *);
+          CurrPtr^.Next := TempPtr;
+      END (* if *);
+					
+END InsertFromFile;
+
+PROCEDURE InsertList ( VAR MyList : LList; VAR name, phone : ARRAY OF CHAR );
+	
+  VAR
+        TempPtr, CurrPtr, PredPtr : LList;
+                            Found : BOOLEAN;
+
+  BEGIN
+        NEW( TempPtr );
+        Assign( name, TempPtr^.Name );
+        Assign( phone, TempPtr^.Phone );
+        TempPtr^.Next := NIL;
+     IF MyList = NIL THEN
+	MyList := TempPtr;
+      ELSE
+       CurrPtr := MyList; PredPtr := NIL;
+       WHILE (CurrPtr # NIL) AND (CompareStr(CurrPtr^.Name, name ) < 0) DO
+           PredPtr := CurrPtr;
+           CurrPtr := CurrPtr^.Next;
+         END (* while *);
+           IF (CurrPtr # NIL) THEN
+            IF (CompareStr(CurrPtr^.Name, name ) # 0) THEN
+              IF (PredPtr # NIL) THEN
+                 TempPtr^.Next := CurrPtr;
+                 PredPtr^.Next := TempPtr;
+               ELSE
+                   TempPtr^.Next := CurrPtr;
+                   MyList := TempPtr;
+                END (* if *);
+              END (* if *);
+              ELSE
+               PredPtr^.Next := TempPtr;
+            END (* if *);
+      END (* if *);
+					
+END InsertList;
+
+PROCEDURE EmptyList( MyList : LList ) : BOOLEAN;
+
+BEGIN
+  
+  RETURN MyList = NIL;
+      
+END EmptyList;
+  
+PROCEDURE FindFirst( MyList : LList; VAR name, phone : ARRAY OF CHAR );
+  
+   BEGIN
+       IF MyList = NIL THEN
+          ConstAssign( "EndOfList", name);
+          ConstAssign( "EndOfList", phone);
+       ELSE
+         Assign( MyList^.Name, name);
+         Assign( MyList^.Phone, phone);
+      END (* if *);
+
+END FindFirst;
+
+PROCEDURE FindNext( MyList : LList; VAR name, phone : ARRAY OF CHAR );
+     
+  VAR
+      PredPtr, CurrPtr : LList;
+                 Found : BOOLEAN;
+
+  BEGIN
+
+       OrderedSearch( MyList, name, PredPtr, CurrPtr, Found );
+       ConstAssign( "EndOfList", name );
+       ConstAssign( "EndOfList", phone );
+       IF Found THEN
+           CurrPtr := CurrPtr^.Next;
+           IF CurrPtr # NIL THEN
+              Assign ( CurrPtr^.Name, name );
+              Assign ( CurrPtr^.Phone, phone );
+            END (* if *);
+        END (* if *);
+
+ END FindNext;
+
+PROCEDURE DeleteObj( VAR MyList : LList; name : ARRAY OF CHAR ) : BOOLEAN;
+
+ VAR
+     CurrPtr, PredPtr : LList;
+                Found : BOOLEAN;
+ 
+     BEGIN
+        OrderedSearch( MyList, name, PredPtr, CurrPtr, Found );
+        IF Found THEN
+           IF PredPtr = NIL THEN
+              MyList := CurrPtr^.Next;
+           ELSE
+              PredPtr^.Next := CurrPtr^.Next;
+           END (* if *);
+           DISPOSE(CurrPtr);
+           RETURN (Found);
+        ELSE
+           RETURN (Found);
+        END (* if *);
+
+END DeleteObj;
+
+END PhonList.

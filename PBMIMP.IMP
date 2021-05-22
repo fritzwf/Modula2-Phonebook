@@ -1,0 +1,521 @@
+IMPLEMENTATION MODULE PbmImp;
+
+FROM StdInOut IMPORT WriteString, WriteLn, GotoXY, CLS, WriteCard, ReadScreen, Write;
+FROM InOut IMPORT Read;
+FROM Utilities IMPORT  CenterStr, Beep;
+FROM ASCII IMPORT EOL, esc;
+FROM MyLib IMPORT ReadStr, WriteDecimal, RaisePower, SoundUp, SoundDown, Error,
+          ScreenSaver, WriteTime, WriteDate, ReadStrEOLFS, BigBox, ClearScreen,
+          Pause, YesNo, YesNo1, More, FindMins, ReadCaps, GetDate, Header, READ,
+          LineHeader, ConvertDecimal, ReadPart, StringMatch, ReadEscCaps;
+FROM FileSystem IMPORT Lookup, SetPos, WriteChar, Close, Delete, Rename,
+                        Reset, Response, GetPos, Length, ReadChar, File;
+FROM Strings IMPORT CompareStr, Assign, ConstAssign;
+FROM PhonList IMPORT LList, CreateList, DestroyList, InsertList, EmptyList,
+                            DeleteObj, FindFirst, FindNext, InsertFromFile;
+FROM PrintOut IMPORT  Busy, IOError, NoAck,  NoPaper, TimeOut, GetStatus,
+                      Initialize, PrintCard, PrintChar, PrintLn, PrintScreen,
+                      PrintStr, SetPrinterNum, WhichPrinter, Done;
+FROM Video IMPORT
+  (* const *) Black,     Blue,       Brown,      Cyan,      Green,
+              Red,       Magenta,    Gray,       High,      Blink,
+  (* proc  *) ClrEOL,    ClrLine,    Color,      ColorBg,   ColorFg,
+              CursorOff, CursorOn ,  DeleteLine, Down,      GetAttrib,
+              GetCursor, InsertLine, Left,       Right,     SetAttrib,
+              SetCursor, ScrollDown, ScrollUp ,  SetVideo,  Up,
+              WhatPage,  WhereX,    WhereY,     WriteAtXY;
+FROM Mouse IMPORT DriverInstalled, Button, ButtonSet, FlagReset, ShowCursor,
+                  HideCursor, GetPosBut, SetCursorPos, GetButPres, GetButRel,
+                  SetHorizontalLimits, SetVerticalLimits, GraphicCursor,
+                  SetGraphicCursor, SetTextCursor, ReadMotionCounters, Event,
+                  EventSet, EventHandler, SetEventHandler, LightPenOn,
+                  LightPenOff, SetMickeysPerPixel, ConditionalOff,
+                  SetSpeedThreshold;
+
+PROCEDURE SearchName;
+
+VAR 
+   blank, name, searchname  : ARRAY [0..29] OF CHAR;
+                      phone : ARRAY [0..12] OF CHAR;
+  Found, Okay, Quit, MouseHit, MouseQuit, PageStop : BOOLEAN;
+                     MyFile : File;
+                    ch, sch : CHAR;
+                    k, i, j : CARDINAL;
+                       x, y : INTEGER;
+                      butt : ButtonSet;
+
+BEGIN
+
+      blank := "                              ";
+ searchname := "                              ";
+
+Lookup( MyFile,"phonenum.dat", FALSE);
+IF MyFile.res = done THEN
+
+ MouseQuit := FALSE;
+
+ WHILE NOT MouseQuit DO
+
+  CLS;
+  GotoXY(3,4); WriteString('Search by letter or enter text');
+  GotoXY(3,5); WriteString('ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ');
+  GotoXY(3,7);
+  WriteString('ABCDEFGHIJKLMNOPQRSTUVWXYZ (OR) °°° Ä Enter Text (OR) °°° Ä Quit');
+  SetCursorPos((36 * 8), (10 * 8)); ShowCursor;
+  GetPosBut( butt, x, y );
+  MouseHit := FALSE;
+    WHILE NOT MouseHit DO
+        i := VAL(CARDINAL, (x DIV 8)); j := VAL(CARDINAL, (y DIV 8));
+        IF (LeftButton IN butt) THEN
+            IF (i >= 3) AND (i <= 28) AND (j = 7) THEN
+                      j := 0;
+                      HideCursor;
+                      MouseHit := TRUE;
+                       CLS; ch := "n"; k := 1;
+                       sch := CHR(i+62);
+                       Okay := FALSE; Found := FALSE; Quit := FALSE;
+                       ReadStrEOLFS( MyFile, name, Okay );
+                          WHILE (NOT Okay) AND NOT Quit DO
+                            ReadStrEOLFS( MyFile, phone, Okay );
+                               IF StringMatch(sch, name ) THEN
+                                  INC(k);
+                                  WriteString("                ");
+                                  WriteString(name); WriteString("  ");
+                                  WriteString(phone);
+                                  WriteLn;
+                                  Found := TRUE;
+                                 END (* if *);
+                               ReadStrEOLFS( MyFile, name, Okay );
+                            IF k MOD 20 = 0 THEN
+                             PageStop := FALSE;
+                             GotoXY(1,24);
+                             WriteString('°°° Ä More °°° Ä Quit');
+                             SetCursorPos((1 * 8), (24 * 8));
+                             ShowCursor;
+                             GetPosBut( butt, x, y );
+                             WHILE NOT PageStop DO
+                               i := VAL(CARDINAL, (x DIV 8)); j := VAL(CARDINAL, (y DIV 8));
+                               IF (LeftButton IN butt) THEN
+                                  IF (i >= 1) AND (i <= 10) AND (j = 24) THEN
+                                   j := 0;
+                                   HideCursor;
+                                   PageStop := TRUE;
+                                   CLS; k := 1;
+                                 ELSIF (i >= 12) AND (i <= 21) AND (j = 24) THEN
+                                   j := 0;
+                                   HideCursor;
+                                   PageStop := TRUE;
+                                   Quit := TRUE;
+                                 ELSE
+                                   Beep;
+                               END (* if *);
+                              ELSIF (RightButton IN butt) THEN
+                                j := 0;
+                                HideCursor;
+                                PageStop := TRUE;
+                                Quit := TRUE;
+                            END (* if *);
+                         GetPosBut( butt, x, y );
+                       END (* while *);
+                  END (* if *);
+                 END (* while *);
+                  Reset(MyFile);
+                  IF NOT Found THEN
+                   GotoXY(20,9);
+                          WriteString('No match found!');
+                         END (* if *);
+                           IF Okay THEN
+                             Pause(52,24);
+                          END (* if *);
+(*
+         ELSIF (i >= 35) AND (i <= 50) AND (j = 7) THEN
+                          HideCursor;
+                          MouseHit := TRUE;
+                          GotoXY(3,9);
+                          WriteString('Enter search text: ');
+                          Okay := FALSE; Found := FALSE;
+                         IF NOT ReadEscCaps( searchname, TRUE ) THEN
+                             CLS; ch := "n"; k := 1;
+                             ReadStrEOLFS( MyFile, name, Okay );
+                           WHILE (NOT Okay) AND (ch # esc) DO
+                             ReadStrEOLFS( MyFile, phone, Okay );
+                             IF StringMatch(searchname, name ) THEN
+                              INC(k);
+                              WriteString("                "); WriteString(name); WriteString("  ");
+                              WriteString(phone);
+                              WriteLn;
+                              Found := TRUE;
+                              END (* if *);
+                             ReadStrEOLFS( MyFile, name, Okay );
+                               IF k MOD 20 = 0 THEN
+                               GotoXY(1,24);
+                               WriteString('-- More -- (Esc to quit)');
+                               Read(ch);
+                               CLS; k := 1;
+                               END; (* if *)
+                             END (* while *);
+                             Reset(MyFile);
+
+
+                          IF NOT Found THEN
+                           GotoXY(20,9);
+                           WriteString('No match found!');
+                           END (* if *);
+                          IF Okay THEN
+                          Pause(52,24);
+                         END (* if *);
+                   END (* if *);
+  *)
+            ELSIF (i >= 57) AND (i <= 66) AND (j = 7) THEN
+                          j := 0;
+                          HideCursor;
+                          MouseHit := TRUE;
+                          MouseQuit := TRUE;
+                     ELSE
+
+                          Beep;
+                      END (* if *);
+      ELSIF (RightButton IN butt) THEN
+            j := 0;
+            HideCursor;
+            MouseHit := TRUE;
+   END (* if *);
+    GetPosBut( butt, x, y );
+  END (* while *);
+END (* while *);
+Close(MyFile);
+ELSE
+   CLS;
+   GotoXY(0,12);
+    CenterStr('The phonebook file does not exist yet!');
+    Pause(52,24);
+END (* if *);
+
+END SearchName;
+
+PROCEDURE ListNames;
+
+VAR 
+            name : ARRAY [0..29] OF CHAR;
+           phone : ARRAY [0..12] OF CHAR;
+  Okay, MouseHit, MouseQuit : BOOLEAN;
+         k, i, j : CARDINAL;
+            x, y : INTEGER;
+          MyFile : File;
+            butt : ButtonSet;
+
+BEGIN
+
+   Lookup( MyFile,"phonenum.dat", FALSE);
+   CLS;
+IF MyFile.res = done THEN
+   Okay := FALSE; MouseQuit := FALSE; k := 2;
+   ReadStrEOLFS( MyFile, name, Okay );
+   WHILE (NOT Okay) AND NOT MouseQuit DO
+       ReadStrEOLFS( MyFile, phone, Okay );
+       WriteString("                "); WriteString(name); WriteString("  ");
+       WriteString(phone);
+       WriteLn;
+      ReadStrEOLFS( MyFile, name, Okay );
+       INC(k);
+         IF k MOD 20 = 0 THEN
+           MouseHit := FALSE;
+           GotoXY(1,24);
+             WriteString('°°° Ä More °°° Ä Quit');
+               ShowCursor;
+               GetPosBut( butt, x, y );
+               SetCursorPos((1 * 8), (24 * 8));
+               WHILE NOT MouseHit DO
+                  i := VAL(CARDINAL, (x DIV 8)); j := VAL(CARDINAL, (y DIV 8));
+                  IF (LeftButton IN butt) THEN
+                     IF (i >= 1) AND (i <= 10) AND (j = 24) THEN
+                          HideCursor;
+                          MouseHit := TRUE;
+                          CLS; k := 2;
+                        ELSIF (i >= 12) AND (i <= 21) AND (j = 24) THEN
+                          HideCursor;
+                          MouseHit := TRUE;
+                          MouseQuit := TRUE;
+                        ELSE
+                          Beep;
+                      END (* if *);
+                   ELSIF (RightButton IN butt) THEN
+                          HideCursor;
+                          MouseQuit := TRUE;
+                          MouseHit := TRUE;
+                   END (* if *);
+                 GetPosBut( butt, x, y );
+               END (* while *);
+        END (* if *);
+   END (* while *);
+   Close(MyFile);
+  IF Okay THEN
+    MouseHit := FALSE;
+    WHILE NOT MouseHit DO
+        GetPosBut( butt, x, y );
+            IF (LeftButton IN butt) OR (RightButton IN butt) THEN
+               MouseHit := TRUE;
+           END (* if *);
+      END (* while *);
+  END (* if *);
+ELSE
+    GotoXY(0,12);
+    CenterStr('The phonebook file does not exist yet!');
+    MouseHit := FALSE;
+    WHILE NOT MouseHit DO
+        GetPosBut( butt, x, y );
+       IF (LeftButton IN butt) OR (RightButton IN butt) THEN
+           MouseHit := TRUE;
+        END (* if *);
+      END (* while *);
+END (* if *);
+END ListNames;
+
+PROCEDURE WriteToFile ( MyFile : File; VAR MyList : LList );
+
+VAR  
+            I : CARDINAL;
+        name  : ARRAY [0..29] OF CHAR;
+        phone : ARRAY [0..12] OF CHAR;
+       
+ BEGIN
+      
+ CLS; GotoXY(0,8); CenterStr('Please wait, saving data. . . .');
+ FindFirst( MyList, name, phone );
+ IF (CompareStr(name,"EmptyList") = 0)  THEN
+      Delete( "phonenum.dat", MyFile );
+  ELSE
+   Lookup( MyFile, "phonenum.dat", TRUE );
+    IF (MyFile.res = done) THEN
+       WHILE CompareStr(name,"EndOfList") # 0 DO
+           FOR I := 0 TO HIGH(name) DO
+           WriteChar( MyFile, name[I] );
+           END (* for *); WriteChar( MyFile, EOL );
+           FOR I := 0 TO HIGH(phone) DO
+           WriteChar( MyFile, phone[I] );
+           END (* for *); WriteChar( MyFile, EOL );
+           FindNext( MyList, name, phone );
+        END (* while *);
+      Close(MyFile);
+   END (* if *);
+ END (* if *);
+
+END WriteToFile;
+
+PROCEDURE PrintPhoneBook( MyFile : File );
+
+VAR 
+                  LinList : LList;
+       exist, found, Okay : BOOLEAN;
+                        i : CARDINAL;
+                    name  : ARRAY [0..29] OF CHAR;
+                    phone : ARRAY [0..12] OF CHAR;
+
+BEGIN
+Initialize;
+IF Done THEN
+i := 0;
+CLS;
+Okay := FALSE;
+Lookup( MyFile, "phonenum.dat", FALSE );
+IF (MyFile.res = done) THEN 
+GotoXY(0,5);
+CenterStr('Printing Phone Book');
+GotoXY(0,8);
+CenterStr('Please wait, printing. . . .');
+CreateList ( LinList );
+ReadStrEOLFS( MyFile, name, Okay );
+WHILE NOT Okay DO
+INC(i);
+ReadStrEOLFS( MyFile, phone, Okay );
+InsertFromFile( LinList, name, phone );
+ReadStrEOLFS( MyFile, name, Okay );
+END (* while *);
+Close ( MyFile );
+PrintStr('    Quick Phonebook v.1.0 by FeuerSoft');  PrintLn;
+PrintStr('    ---------------------------------------------------------');
+PrintLn; PrintLn;
+FindFirst( LinList, name, phone );
+  WHILE CompareStr(name,"EndOfList") # 0 DO
+  PrintStr('    '); PrintStr( name ); PrintStr('  '); PrintStr( phone );
+  PrintLn;
+  FindNext( LinList, name, phone );
+END (* while *);
+PrintLn; PrintLn;
+PrintStr('    '); PrintCard( i, 2 ); PrintStr(" entries found."); PrintLn;
+DestroyList( LinList );
+END (* if *);
+END (* if *);
+
+END PrintPhoneBook;
+
+PROCEDURE AddName( MyFile : File );
+
+VAR 
+        blank,  name  : ARRAY [0..29] OF CHAR;
+        pblank, phone : ARRAY [0..12] OF CHAR;
+              LinList : LList;
+   Added, exist, found, Okay, Quit : BOOLEAN;
+
+BEGIN
+
+ CreateList( LinList );
+ Lookup( MyFile, "phonenum.dat", FALSE );
+ IF (MyFile.res = done) THEN 
+	CLS;
+	GotoXY(0,8);
+        CenterStr('Please wait, loading data. . . .');
+	 Okay := FALSE;
+	ReadStrEOLFS( MyFile, name, Okay );
+	WHILE NOT Okay DO
+	ReadStrEOLFS( MyFile, phone, Okay );
+        InsertFromFile( LinList, name, phone );
+	ReadStrEOLFS( MyFile, name, Okay );
+	END (* while *);
+	Close ( MyFile );
+   END (* if *);   	
+        CLS;
+	Added := FALSE;
+	Okay := FALSE;
+	blank := "                              ";
+	pblank := "             ";
+        GotoXY(10,9);
+	WriteString('Enter Name Ä> ');
+Quit := FALSE;
+REPEAT
+Okay := FALSE;
+found := FALSE;
+GotoXY(24,9); ClrEOL; GotoXY(10,11); ClrEOL; GotoXY(24,9);
+    IF NOT ReadEscCaps( name,TRUE ) AND (CompareStr(name, blank) # 0) THEN
+        GotoXY(1,15); DeleteLine();
+        GotoXY(10,11);
+        WriteString('Enter phone number Ä> ');
+                     ReadPart( phone,TRUE );
+		   IF (CompareStr(phone, pblank) # 0) THEN
+		       InsertList ( LinList, name, phone );
+		       Added := TRUE;
+		       GotoXY(1,15);
+		       WriteString(name);
+		       WriteString(' ');WriteString( phone );
+	     	       WriteString(' was added to the database.');
+		    END (* if *);
+         ELSE
+           Quit := TRUE;
+       END (* if *);
+UNTIL Quit;
+  IF Added THEN
+    WriteToFile( MyFile, LinList ); 
+  END (* if *);
+ DestroyList( LinList );
+CLS;
+END AddName;
+
+PROCEDURE DisplayNames( MyFile : File );
+
+VAR          name  : ARRAY [0..29] OF CHAR;
+             phone : ARRAY [0..12] OF CHAR;
+              Okay : BOOLEAN;    
+                 k : CARDINAL;
+                ch : CHAR;
+
+BEGIN
+ch := "n";
+Okay := FALSE;
+k := 0;
+Lookup( MyFile,"phonenum.dat", FALSE);
+IF MyFile.res = done THEN
+CLS;
+ReadStrEOLFS( MyFile, name, Okay );
+WHILE (NOT Okay) AND (ch # esc) DO
+ INC(k);
+  WriteString("                "); WriteString(name); WriteString("  ");
+  ReadStrEOLFS( MyFile, phone, Okay ); WriteString(phone);
+ WriteLn;
+  ReadStrEOLFS( MyFile, name, Okay );
+    IF k MOD 20 = 0 THEN
+      GotoXY(1,24);
+      WriteString('-- More -- (Esc to quit)');
+    Read(ch);
+     CLS;
+     k := 0; 
+    END; (* if *)
+  END (* while *); 
+  Close(MyFile);
+  IF Okay THEN
+  Pause(52,24);
+  ELSE
+ END (* if *);
+ELSE
+CLS;
+GotoXY(0,12);
+CenterStr('The phonebook file does not exist yet!');
+Pause(52,24);
+END (* if *);
+END DisplayNames;
+
+PROCEDURE DeleteName( MyFile : File );
+
+
+VAR  
+                LinList : LList;
+     Quit, check, name  : ARRAY [0..29] OF CHAR;
+                  phone : ARRAY [0..12] OF CHAR;
+      found, exist, Okay : BOOLEAN;
+
+BEGIN
+
+  Lookup( MyFile, "phonenum.dat", FALSE);
+  
+  IF (MyFile.res = done) THEN
+        CLS;
+        GotoXY(0,8);
+        CenterStr('Please wait, loading data. . . .');
+	Okay := FALSE;
+        CreateList( LinList );
+	ReadStrEOLFS( MyFile, name, Okay );
+	WHILE NOT Okay DO
+		ReadStrEOLFS( MyFile, phone, Okay );
+                InsertFromFile( LinList, name, phone );
+		ReadStrEOLFS( MyFile, name, Okay );
+	  END (* while *);
+ 	  Close ( MyFile );
+          Quit := "                              ";
+          CLS;
+          GotoXY(10,12);
+	  WriteString('Enter name to delete Ä> ');
+        IF NOT ReadEscCaps( check,TRUE ) THEN
+ 		found := FALSE;
+	 	Okay := FALSE;
+		FindFirst ( LinList, name, phone );
+	WHILE (NOT found) AND (CompareStr( name, "EndOfList" ) # 0)
+                  AND (NOT Okay) DO
+	           IF CompareStr( name, check ) = 0 THEN
+         	           IF  DeleteObj( LinList, name ) THEN
+                               WriteToFile( MyFile, LinList ); 
+                                       found := TRUE;
+                                  END (* if *);
+                             ELSIF (CompareStr( check, name ) < 0) THEN                               Okay := TRUE;
+                          ELSE
+                        FindNext( LinList, name, phone );
+                    END (* if *);
+       END (* while *);
+         CLS;
+	 IF found THEN 
+	     GotoXY(10,14);
+	     WriteString( name ); WriteString('    '); WriteString( phone );
+	     WriteString(' was deleted!');
+	     Pause(52,24);
+          ELSE
+	     GotoXY(10,14);
+	     WriteString( check );
+	     WriteString(' was not found in the list!');
+	     Pause(52,24);
+         END (* if *); 
+     END (* if *);
+   DestroyList( LinList );
+ END (* if *);
+CLS;
+
+END DeleteName;
+
+END PbmImp.

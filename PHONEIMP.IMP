@@ -1,0 +1,389 @@
+IMPLEMENTATION MODULE PhoneImp;
+
+FROM StdInOut IMPORT WriteString, WriteLn, GotoXY, CLS, WriteCard, Write;
+FROM InOut IMPORT Read;
+FROM Utilities IMPORT  CenterStr;
+FROM ASCII IMPORT EOL, esc;
+FROM MyLib IMPORT ReadStr, WriteDecimal, RaisePower, SoundUp, SoundDown, Error,
+          ScreenSaver, WriteTime, WriteDate, ReadStrEOLFS, BigBox, ClearScreen,
+          Pause, YesNo, YesNo1, More, FindMins, ReadCaps, GetDate, Header, READ,
+          LineHeader, ConvertDecimal, ReadPart, StringMatch, ReadEscCaps;
+FROM FileSystem IMPORT Lookup, SetPos, WriteChar, Close, Delete, Rename,
+                        Reset, Response, GetPos, Length, ReadChar, File;
+FROM Strings IMPORT CompareStr, Assign;
+FROM PhonList IMPORT LList, CreateList, DestroyList, InsertList, EmptyList,
+                            DeleteObj, FindFirst, FindNext, InsertFromFile;
+FROM PrintOut IMPORT  Busy, IOError, NoAck,  NoPaper, TimeOut, GetStatus,
+                      Initialize, PrintCard, PrintChar, PrintLn, PrintScreen,
+                      PrintStr, SetPrinterNum, WhichPrinter, Done;
+FROM Video IMPORT
+  (* const *) Black,     Blue,       Brown,      Cyan,      Green,
+              Red,       Magenta,    Gray,       High,      Blink,
+  (* proc  *) ClrEOL,    ClrLine,    Color,      ColorBg,   ColorFg,
+              CursorOff, CursorOn ,  DeleteLine, Down,      GetAttrib,
+              GetCursor, InsertLine, Left,       Right,     SetAttrib,
+              SetCursor, ScrollDown, ScrollUp ,  SetVideo,  Up,
+              WhatPage,  WhereX,    WhereY,     WriteAtXY;
+
+
+PROCEDURE SearchName( MyFile : File );
+
+VAR 
+   blank, name, searchname  : ARRAY [0..29] OF CHAR;
+                      phone : ARRAY [0..12] OF CHAR;
+          Found, Okay, Quit : BOOLEAN;
+                       i, k : CARDINAL;
+                         ch : CHAR;
+
+BEGIN
+
+  blank := "                              ";
+  searchname := "                              ";
+
+Lookup( MyFile,"phonenum.dat", FALSE);
+IF MyFile.res = done THEN
+Quit := FALSE;
+REPEAT
+
+  ColorFg(15);
+  CLS;
+  GotoXY(3,6);
+  WriteString('Search and Display Phone Book');
+  GotoXY(3,7);
+  WriteString('(ENTER = ALL | Esc = Quit)');
+  GotoXY(3,9);
+  WriteString('Enter search text: ');
+  Okay := FALSE;
+  Found := FALSE;
+  IF NOT ReadEscCaps( searchname, TRUE ) THEN
+     CLS;
+       ch := "n"; k := 1; i := 9;
+       ReadStrEOLFS( MyFile, name, Okay );
+    WHILE (NOT Okay) AND (ch # esc) DO
+        ReadStrEOLFS( MyFile, phone, Okay );
+     IF StringMatch(searchname, name ) THEN
+       INC(i); INC(k);
+     ColorFg(i);
+     WriteString("                "); WriteString(name); WriteString("  ");
+     WriteString(phone);
+     WriteLn;
+     Found := TRUE;
+    END (* if *);
+    ReadStrEOLFS( MyFile, name, Okay );
+    IF (i = 15) THEN
+       i := 9;
+     END (* if *);
+    IF k MOD 20 = 0 THEN
+      GotoXY(1,24);
+      WriteString('-- More -- (Esc to quit)');
+      Read(ch);
+      CLS;
+      k := 1;
+    END; (* if *)
+  END (* while *); 
+  Reset(MyFile);
+  IF NOT Found THEN
+   GotoXY(20,9);
+   WriteString('No match found!');
+   END (* if *);
+  IF Okay THEN
+  Pause(52,24);
+ END (* if *);
+ELSE
+ Quit := TRUE;
+END (* if *);
+UNTIL Quit;
+Close(MyFile);
+ELSE
+   CLS;
+   GotoXY(0,12);
+    CenterStr('The phonebook file does not exist yet!');
+    Pause(52,24);
+END (* if *);
+
+END SearchName;
+
+PROCEDURE WriteToFile ( MyFile : File; VAR MyList : LList );
+
+VAR  
+            I : CARDINAL;
+        name  : ARRAY [0..29] OF CHAR;
+        phone : ARRAY [0..12] OF CHAR;
+       
+ BEGIN
+      
+ CLS; GotoXY(0,8); CenterStr('Please wait, saving data. . . .');
+ FindFirst( MyList, name, phone );
+ IF (CompareStr(name,"EmptyList") = 0)  THEN
+      Delete( "phonenum.dat", MyFile );
+  ELSE
+   Lookup( MyFile, "phonenum.dat", TRUE );
+    IF (MyFile.res = done) THEN
+       WHILE CompareStr(name,"EndOfList") # 0 DO
+           FOR I := 0 TO HIGH(name) DO
+           WriteChar( MyFile, name[I] );
+           END (* for *); WriteChar( MyFile, EOL );
+           FOR I := 0 TO HIGH(phone) DO
+           WriteChar( MyFile, phone[I] );
+           END (* for *); WriteChar( MyFile, EOL );
+           FindNext( MyList, name, phone );
+        END (* while *);
+      Close(MyFile);
+   END (* if *);
+ END (* if *);
+
+END WriteToFile;
+
+PROCEDURE PrintPhoneBook( MyFile : File );
+
+VAR 
+                  LinList : LList;
+       exist, found, Okay : BOOLEAN;
+                        i : CARDINAL;
+                    name  : ARRAY [0..29] OF CHAR;
+                    phone : ARRAY [0..12] OF CHAR;
+
+BEGIN
+Initialize;
+IF Done THEN
+i := 0;
+CLS;
+Okay := FALSE;
+Lookup( MyFile, "phonenum.dat", FALSE );
+IF (MyFile.res = done) THEN 
+GotoXY(0,5);
+CenterStr('Printing Phone Book');
+GotoXY(0,8);
+CenterStr('Please wait, printing. . . .');
+CreateList ( LinList );
+ReadStrEOLFS( MyFile, name, Okay );
+WHILE NOT Okay DO
+INC(i);
+ReadStrEOLFS( MyFile, phone, Okay );
+InsertFromFile( LinList, name, phone );
+ReadStrEOLFS( MyFile, name, Okay );
+END (* while *);
+Close ( MyFile );
+PrintStr('    Quick Phonebook v.1.0 by FeuerSoft');  PrintLn;
+PrintStr('    ---------------------------------------------------------');
+PrintLn; PrintLn;
+FindFirst( LinList, name, phone );
+  WHILE CompareStr(name,"EndOfList") # 0 DO
+  PrintStr('    '); PrintStr( name ); PrintStr('  '); PrintStr( phone );
+  PrintLn;
+  FindNext( LinList, name, phone );
+END (* while *);
+PrintLn; PrintLn;
+PrintStr('    '); PrintCard( i, 2 ); PrintStr(" entries found."); PrintLn;
+DestroyList( LinList );
+END (* if *);
+END (* if *);
+
+END PrintPhoneBook;
+
+PROCEDURE AddName( MyFile : File );
+
+VAR 
+        blank,  name  : ARRAY [0..29] OF CHAR;
+        pblank, phone : ARRAY [0..12] OF CHAR;
+              LinList : LList;
+   Added, exist, found, Okay, Quit : BOOLEAN;
+
+BEGIN
+
+ CreateList( LinList );
+ Lookup( MyFile, "phonenum.dat", FALSE );
+ IF (MyFile.res = done) THEN 
+	CLS;
+	GotoXY(0,8);
+        CenterStr('Please wait, loading data. . . .');
+	 Okay := FALSE;
+	ReadStrEOLFS( MyFile, name, Okay );
+	WHILE NOT Okay DO
+	ReadStrEOLFS( MyFile, phone, Okay );
+        InsertFromFile( LinList, name, phone );
+	ReadStrEOLFS( MyFile, name, Okay );
+	END (* while *);
+	Close ( MyFile );
+   END (* if *);   	
+        CLS;
+	Added := FALSE;
+	Okay := FALSE;
+	blank := "                              ";
+	pblank := "             ";
+        GotoXY(10,9);
+	WriteString('Enter Name Ä> ');
+Quit := FALSE;
+REPEAT
+Okay := FALSE;
+found := FALSE;
+GotoXY(24,9); ClrEOL; GotoXY(10,11); ClrEOL; GotoXY(24,9);
+    IF NOT ReadEscCaps( name,TRUE ) AND (CompareStr(name, blank) # 0) THEN
+        GotoXY(1,15); DeleteLine();
+        GotoXY(10,11);
+        WriteString('Enter phone number Ä> ');
+                     ReadPart( phone,TRUE );
+		   IF (CompareStr(phone, pblank) # 0) THEN
+		       InsertList ( LinList, name, phone );
+		       Added := TRUE;
+		       GotoXY(1,15);
+		       WriteString(name);
+		       WriteString(' ');WriteString( phone );
+	     	       WriteString(' was added to the database.');
+		    END (* if *);
+         ELSE
+           Quit := TRUE;
+       END (* if *);
+UNTIL Quit;
+  IF Added THEN
+    WriteToFile( MyFile, LinList ); 
+  END (* if *);
+ DestroyList( LinList );
+CLS;
+END AddName;
+
+PROCEDURE DisplayNames( MyFile : File );
+
+VAR          name  : ARRAY [0..29] OF CHAR;
+             phone : ARRAY [0..12] OF CHAR;
+              Okay : BOOLEAN;    
+               i,k : CARDINAL;
+                ch : CHAR;
+(*
+    Blue           = 1;
+    Green          = 2;
+    Cyan           = 3;
+    Red            = 4;
+    Magenta        = 5;
+    Brown          = 6;
+    Gray           = 7;
+
+PROCEDURE Color(  x,y : CARDINAL);
+(* Changes both BG and FG colors *)
+
+PROCEDURE ColorBg(x   : CARDINAL);
+(* Changes the BG color *)
+
+PROCEDURE ColorFg(x   : CARDINAL);
+(* Changes the fg color *)
+
+ *)
+
+BEGIN
+
+ch := "n";
+Okay := FALSE;
+k := 0;
+Lookup( MyFile,"phonenum.dat", FALSE);
+IF MyFile.res = done THEN
+CLS;
+i := 0;
+ReadStrEOLFS( MyFile, name, Okay );
+WHILE (NOT Okay) AND (ch # esc) DO
+ INC(k); INC(i);
+  ColorFg(i);
+  WriteString("                "); WriteString(name); WriteString("  ");
+  ReadStrEOLFS( MyFile, phone, Okay ); WriteString(phone);
+ WriteLn;
+  ReadStrEOLFS( MyFile, name, Okay );
+    IF (i = 7) THEN
+       i := 0;
+     END (* if *);
+    IF k MOD 20 = 0 THEN
+      GotoXY(1,24);
+      WriteString('-- More -- (Esc to quit)');
+    Read(ch);
+     CLS;
+     k := 0; 
+    END; (* if *)
+  END (* while *); 
+  Close(MyFile);
+  IF Okay THEN
+  Pause(52,24);
+  ELSE
+ END (* if *);
+ELSE
+CLS;
+GotoXY(0,12);
+CenterStr('The phonebook file does not exist yet!');
+Pause(52,24);
+END (* if *);
+ColorFg(7);
+
+END DisplayNames;
+
+PROCEDURE DeleteName( MyFile : File );
+
+
+VAR  
+                LinList : LList;
+     Quit, check, name  : ARRAY [0..29] OF CHAR;
+                  phone : ARRAY [0..12] OF CHAR;
+      found, exist, Okay : BOOLEAN;
+
+BEGIN
+
+  Lookup( MyFile, "phonenum.dat", FALSE);
+  
+  IF (MyFile.res = done) THEN
+        CLS;
+        GotoXY(0,8);
+        CenterStr('Please wait, loading data. . . .');
+	Okay := FALSE;
+        CreateList( LinList );
+	ReadStrEOLFS( MyFile, name, Okay );
+	WHILE NOT Okay DO
+		ReadStrEOLFS( MyFile, phone, Okay );
+                InsertFromFile( LinList, name, phone );
+		ReadStrEOLFS( MyFile, name, Okay );
+	  END (* while *);
+ 	  Close ( MyFile );
+          Quit := "                              ";
+          CLS;
+          GotoXY(10,12);
+          WriteString('Enter name text to delete Ä> ');
+        IF NOT ReadEscCaps( check,TRUE ) THEN
+ 		found := FALSE;
+	 	Okay := FALSE;
+		FindFirst ( LinList, name, phone );
+	WHILE (NOT found) AND (CompareStr( name, "EndOfList" ) # 0)
+                  AND (NOT Okay) DO
+            IF StringMatch(check, name ) THEN
+                   GotoXY(10,15); WriteString('Delete: '); WriteString(name);
+                   Write(" "); WriteString( phone );
+                   GotoXY(10,17);
+                   WriteString('From the database?');
+                   CursorOn;
+                   IF YesNo("Enter choice [Y or N] ->  ", 10, 20 ) THEN
+                      found := TRUE;
+                         IF  DeleteObj( LinList, name ) THEN
+                             WriteToFile( MyFile, LinList );
+                         END (* if *);
+                  END (* if *);
+                  CursorOff;
+           END (* if *);
+           IF NOT found THEN
+           FindNext( LinList, name, phone );
+           END (* if *);
+       END (* while *);
+         CLS;
+	 IF found THEN 
+	     GotoXY(10,14);
+             WriteString( name ); WriteString('    '); WriteString( phone );
+	     WriteString(' was deleted!');
+	     Pause(52,24);
+          ELSE
+             GotoXY(10,14);
+             WriteString("Name text: "); WriteString( check );
+             GotoXY(10,17);
+             WriteString('Was NOT deleted from the database!');
+	     Pause(52,24);
+         END (* if *); 
+     END (* if *);
+   DestroyList( LinList );
+ END (* if *);
+CLS;
+
+END DeleteName;
+
+END PhoneImp.

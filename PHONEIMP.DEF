@@ -1,0 +1,17 @@
+DEFINITION MODULE PhoneImp;
+
+FROM FileSystem IMPORT  File;
+
+EXPORT QUALIFIED  PrintPhoneBook, AddName, DisplayNames, DeleteName, SearchName;
+
+PROCEDURE SearchName( MyFile : File );
+
+PROCEDURE PrintPhoneBook( MyFile : File );
+
+PROCEDURE AddName( MyFile : File );
+
+PROCEDURE DisplayNames( MyFile : File );
+
+PROCEDURE DeleteName( MyFile : File );
+
+END PhoneImp.

@@ -1,0 +1,26 @@
+If you have an earlier version than 3.0 of Quick Phonebook,
+you'll need to rename your data file from "phonedat" to "phonenum.dat".
+I decided to change the name of the phonebook file to a .dat extension
+because its easier to backup files that have a .dat extension, which most
+programs use.  If this is the first time you are running phonebook then
+you will see an initial message indicating that the phonebook data file
+does not exist yet.  This will not happen again after you enter the first
+phone number in the database list.
+
+This version is easy to use and self explanatory.
+Hopefully it will make you want to use your computer as a phone
+book.  I know that most phonebook software takes to long to load
+or takes to much typing to use.  I always hated that.  This
+version keeps it simple.  It now has color phone number entry display.
+
+I will revise this program in the future to dial the number if you
+have a modem and also to keep track of other information.  Don't
+worry though because the data you enter now will still work for the
+future program.
+
+The program pbc.exe allows you to use your phonebook database to
+dial your phone using your modem.  Just run pbinit.exe first to tell
+it what COM port your modem is on, then run pbc.exe.
+
+Fritz Feuerbacher
+

@@ -1,0 +1,57 @@
+DEFINITION MODULE PhonList;
+
+EXPORT QUALIFIED LList, CreateList, DestroyList, InsertList, EmptyList,
+                       DeleteObj, FindFirst, FindNext, InsertFromFile;
+
+TYPE  LList;
+
+PROCEDURE OrderedSearch( MyList : LList; name : ARRAY OF CHAR;
+                     VAR PredPtr, CurrPtr : LList; VAR Found : BOOLEAN );
+(*************************************************************)
+(*  Does an ordered search.                                  *)
+(*  When done, TRUE is sent back to allow operations.        *)
+(*************************************************************)
+
+PROCEDURE CreateList( VAR MyList : LList );
+(*************************************************************)
+(*  Initialize an instance of a variable of type LList.      *)
+(*  When done, TRUE is sent back to allow operations.        *)
+(*************************************************************)
+
+PROCEDURE DestroyList( VAR MyList : LList );
+(*************************************************************)
+(*  This procedure wipes clear the linked linear list from   *)
+(*  system memory.                                           *)
+(*************************************************************)
+
+PROCEDURE InsertFromFile( VAR MyList : LList; VAR name, phone : ARRAY OF CHAR );
+(*************************************************************)
+(*Inserts from a file, which is already sorted.              *)
+(*************************************************************)
+
+PROCEDURE InsertList ( VAR MyList : LList; VAR name, phone : ARRAY OF CHAR );
+(*************************************************************)
+(*Inserts an object into the list, dynamically enlarging it. *)
+(*************************************************************)
+
+PROCEDURE EmptyList( MyList : LList ) : BOOLEAN;
+(*************************************************************)
+(*  Looks for NIL in FirstPtr.  If found, list is empty.     *)
+(*************************************************************)
+
+PROCEDURE FindFirst( MyList : LList; VAR name, phone : ARRAY OF CHAR );
+(*************************************************************)
+(* Procedure is used to find the first object in the list.   *)
+(*************************************************************)
+
+PROCEDURE FindNext( MyList : LList; VAR name, phone : ARRAY OF CHAR );
+(*************************************************************)
+(* Procedure to find the next object in the list.            *)
+(*************************************************************)
+
+PROCEDURE DeleteObj( VAR MyList : LList; name : ARRAY OF CHAR ) : BOOLEAN;
+(*************************************************************)
+(* Procedure to delete an item from the list.                *)
+(*************************************************************)
+
+END PhonList.
